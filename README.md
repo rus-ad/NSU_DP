@@ -1,2 +1,2 @@
-# NSU_DP
-NSU Community Structure Study
+# NSU Community Structure Study
+
