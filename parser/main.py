@@ -2,7 +2,7 @@
 import keys
 
 import vk_api
-from vk_api import audio
+from vk_api import audio, tools
 import requests
 from tqdm.notebook import tqdm
 import os
@@ -28,23 +28,45 @@ def get_song(song_data):
     return result
 
 
-def create_folder(friend_name):
-    path = base_path + friend_name + '/'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    return path
-
-
-def get_musicks(friend_name, ID):
-    path = create_folder(friend_name)
-    musicks_data = vk_audio.get(owner_id=ID)
+def get_musicks(friend_name, ID, path):
+    musicks_data = vk_audio.get(owner_id=ID)[:NUMBER_SONGS]
     for song_data in tqdm(musicks_data, total=len(musicks_data)):
         song = get_song(song_data)
-        song_name = f'{song_data["artist"]}_{song_data["title"]}.mp3'
-        with open(path + song_name, 'wb') as file:
+        song_name = f'{song_data["artist"]}_{song_data["title"]}'[:50].replace('/', '')
+        with open(path + song_name + '.mp3', 'wb') as file:
             file.write(song.content)
 
 
-get_musicks('angelica', '132403360')
+NUMBER_SONGS = 10
+friends = vk.friends.get()
+for friend in tqdm(friends['items']):
+    time.sleep(1)
+    user_info = vk.users.get(user_ids=str(friend))[0]
+    first_name = user_info.get('first_name', None).lower()
+    last_name = user_info.get('last_name', None).lower()
+    
+    friend_name = f'{first_name}_{last_name}'
+    path = base_path + friend_name + '/'
+    if os.path.exists(path):
+        continue
+    os.makedirs(path)
+    
+    try:
+        get_musicks(friend_name, str(friend), path)
+    except Exception as err:
+        print(friend_name, err)
+
+
+
+
+
+# +
+# for i in os.listdir('data/'):
+#     if len(os.listdir(f'data/{i}')) ==  0:
+#         os.removedirs(f'data/{i}')
+#         print(f'data/{i}')
+# -
+
+
 
 

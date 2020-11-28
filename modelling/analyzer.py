@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 # https://towardsdatascience.com/music-genre-classification-with-python-c714d032f0d8
-# Проход через ноль
-# Центроид
-from pydub import AudioSegment
-name = 'Bloodborne: The Old Hunters OST_Lady Maria of the Astral Clocktower'
-sound = AudioSegment.from_mp3(f"../parser/data/{name}.mp3")
-sound.export(f"{name}.wav", format="wav")
+name = '../parser/data_wav/vladimir_kozlov/Disturbed_Warrior'
 
 import librosa
 audio_path = f"{name}.wav"
