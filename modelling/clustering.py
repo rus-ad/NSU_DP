@@ -32,12 +32,25 @@ for center in model.cluster_centers_:
     distances = []
     for vector in X.toarray():
         distances.append(np.linalg.norm(vector - center))
-    leaders.append(np.argmin(distances))
+        idx = set(range(len(distances))) - set(leaders)
+    leaders.append(np.argmin(np.array(distances)[list(idx)]))
 
-plt.figure(figsize=(12, 12))
+plt.figure(figsize=(20, 20))
 plt.scatter(X_compact[:, 0], X_compact[:, 1], c=y_pred)
 plt.scatter(X_compact[leaders, 0], X_compact[leaders, 1], s=180, marker='*')
 plt.title("KMeans");
+
+from collections import Counter
+import re
+
+test = ' '.join(df[df['predict'] == 1]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(df[df['predict'] == 2]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(df[df['predict'] == 0]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
 
 vectorizer = TfidfVectorizer(analyzer='word', max_features=1000)
 X = vectorizer.fit_transform(list(features.values()))
@@ -52,6 +65,230 @@ df['predict'] = y_pred
 plt.figure(figsize=(12, 12))
 plt.scatter(X_compact[:, 0], X_compact[:, 1], c=y_pred)
 plt.title("DBSCAN");
+
+features_df = pd.read_pickle('../parser/save.pkl')
+
+for idx, i in enumerate(features_df['spec_cent'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['spec_cent'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['spec_cent'].iloc[idx] = np.pad(
+            i.flatten(), 
+            (0, 1292 - i.shape[1]), 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(1, 1292)
+
+result = {}
+for name in set(features_df['name']):
+    if name not in result:
+        result[name] = []
+    result[name].append(
+        np.mean(features_df[features_df['name'] == name]['spec_cent'].tolist(), 
+                axis=0).flatten()
+    )
+train = pd.DataFrame(result).T
+
+X = train[0].tolist()
+pca = PCA(n_components=2)
+X_compact = pca.fit_transform(X)
+model = KMeans(n_clusters=3, random_state=random_state)
+y_pred = model.fit_predict(X)
+
+train['spec_cent_predict'] = y_pred
+
+leaders = []
+for center in model.cluster_centers_:
+    distances = []
+    for vector in X:
+        distances.append(np.linalg.norm(vector - center))
+        idx = set(range(len(distances))) - set(leaders)
+    leaders.append(np.argmin(np.array(distances)[list(idx)]))
+
+plt.figure(figsize=(20, 20))
+plt.scatter(X_compact[:, 0], X_compact[:, 1], c=y_pred)
+plt.scatter(X_compact[leaders, 0], X_compact[leaders, 1], s=180, marker='*')
+plt.title("KMeans");
+
+train['songs'] = train.index.map(df.set_index('name')['songs'])
+
+test = ' '.join(train[train['spec_cent_predict'] == 0]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(train[train['spec_cent_predict'] == 1]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(train[train['spec_cent_predict'] == 2]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+# +
+for idx, i in enumerate(features_df['mfcc'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['mfcc'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['mfcc'].iloc[idx] = np.pad(
+            i, 
+            [(0, 0), (0, 1292 - i.shape[1])], 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(20, 1292)
+        
+result = {}
+for name in set(features_df['name']):
+    if name not in result:
+        result[name] = []
+    result[name].append(
+        np.mean(features_df[features_df['name'] == name]['mfcc'].tolist(), 
+                axis=0).flatten()
+    )
+train = pd.DataFrame(result).T
+train['songs'] = train.index.map(df.set_index('name')['songs'])
+# -
+
+X = train[0].tolist()
+pca = PCA(n_components=2)
+X_compact = pca.fit_transform(X)
+model = KMeans(n_clusters=2, random_state=random_state)
+y_pred = model.fit_predict(X)
+train['mfcc_predict'] = y_pred
+
+leaders = []
+for center in model.cluster_centers_:
+    distances = []
+    for vector in X:
+        distances.append(np.linalg.norm(vector - center))
+        idx = set(range(len(distances))) - set(leaders)
+    leaders.append(np.argmin(np.array(distances)[list(idx)]))
+
+plt.figure(figsize=(20, 20))
+plt.scatter(X_compact[:, 0], X_compact[:, 1], c=y_pred)
+plt.scatter(X_compact[leaders, 0], X_compact[leaders, 1], s=180, marker='*')
+plt.title("KMeans");
+
+train['songs'] = train.index.map(df.set_index('name')['songs'])
+test = ' '.join(train[train['mfcc_predict'] == 0]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(train[train['mfcc_predict'] == 1]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+for idx, i in enumerate(features_df['spec_bw'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['spec_bw'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['spec_bw'].iloc[idx] = np.pad(
+            i.flatten(), 
+            (0, 1292 - i.shape[1]), 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(1, 1292)
+
+for idx, i in enumerate(features_df['rolloff'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['rolloff'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['rolloff'].iloc[idx] = np.pad(
+            i.flatten(), 
+            (0, 1292 - i.shape[1]), 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(1, 1292)
+
+for idx, i in enumerate(features_df['zcr'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['zcr'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['zcr'].iloc[idx] = np.pad(
+            i.flatten(), 
+            (0, 1292 - i.shape[1]), 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(1, 1292)
+
+for idx, i in enumerate(features_df['rmse'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['rmse'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['rmse'].iloc[idx] = np.pad(
+            i.flatten(), 
+            (0, 1292 - i.shape[1]), 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(1, 1292)
+
+for idx, i in enumerate(features_df['chroma_stft'].to_list()):
+    if i.shape != (1, 1292):
+        if i.shape[1] > 1292:
+            features_df['chroma_stft'].iloc[idx] = i[:, :1292]
+            continue
+        
+        features_df['chroma_stft'].iloc[idx] = np.pad(
+            i, 
+            [(0, 0), (0, 1292 - i.shape[1])], 
+            'constant', 
+            constant_values=(0, 0)
+        ).reshape(12, 1292)
+
+# +
+result = {}
+for name in set(features_df['name']):
+    if name not in result:
+        result[name] = []
+    mfcc = np.mean(features_df[features_df['name'] == name]['mfcc'].tolist()).flatten()[0]
+    spec_cent = np.mean(features_df[features_df['name'] == name]['spec_cent'].tolist()).flatten()[0]
+    spec_bw = np.mean(features_df[features_df['name'] == name]['spec_bw'].tolist()).flatten()[0]
+    rolloff = np.mean(features_df[features_df['name'] == name]['rolloff'].tolist()).flatten()[0]
+    zcr = np.mean(features_df[features_df['name'] == name]['zcr'].tolist()).flatten()[0]
+    rmse = np.mean(features_df[features_df['name'] == name]['rmse'].tolist()).flatten()[0]
+    chroma_stft = np.mean(features_df[features_df['name'] == name]['chroma_stft'].tolist()).flatten()[0]
+    result[name].append([mfcc, spec_cent, spec_bw, rolloff, zcr, rmse, chroma_stft])
+
+train = pd.DataFrame(result).T
+train['songs'] = train.index.map(df.set_index('name')['songs'])
+# -
+
+X = train[0].tolist()
+pca = PCA(n_components=2)
+X_compact = pca.fit_transform(X)
+model = KMeans(n_clusters=3, random_state=random_state)
+y_pred = model.fit_predict(X)
+train['all_predict'] = y_pred
+
+leaders = []
+for center in model.cluster_centers_:
+    distances = []
+    for vector in X:
+        distances.append(np.linalg.norm(vector - center))
+        idx = set(range(len(distances))) - set(leaders)
+    leaders.append(np.argmin(np.array(distances)[list(idx)]))
+
+plt.figure(figsize=(20, 20))
+plt.scatter(X_compact[:, 0], X_compact[:, 1], c=y_pred)
+plt.scatter(X_compact[leaders, 0], X_compact[leaders, 1], s=180, marker='*')
+plt.title("KMeans");
+
+test = ' '.join(train[train['all_predict'] == 0]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(train[train['all_predict'] == 1]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+test = ' '.join(train[train['all_predict'] == 2]['songs'].tolist())
+Counter([i for i in re.split('_|\s', test) if len(i) > 2]).most_common(30)
+
+
 
 # ## GraphSAGE
 
